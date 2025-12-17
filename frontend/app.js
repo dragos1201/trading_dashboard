@@ -22,15 +22,22 @@ const ABSORPTION_TICKS = 8;
 const pairEl = document.getElementById("pair");
 const priceEl = document.getElementById("price");
 const statusEl = document.getElementById("status");
+const statusText = document.getElementById("statusText");
+
+const statTotalBuys = document.getElementById("totalBuys");
+const statTotalSells = document.getElementById("totalSells");
+const statNetDelta = document.getElementById("netDelta");
+const statCvd = document.getElementById("cvdValue");
+const statLastUpdate = document.getElementById("lastUpdate");
 
 const fpEl = document.getElementById("footprint");
 const tapeEl = document.getElementById("tape");
 
 const heatmap = document.getElementById("heatmap");
-const hctx = heatmap.getContext("2d");
+const hctx = heatmap ? heatmap.getContext("2d") : null;
 
 const cvdCanvas = document.getElementById("cvdChart");
-const cctx = cvdCanvas.getContext("2d");
+const cctx = cvdCanvas ? cvdCanvas.getContext("2d") : null;
 
 // =========================
 // STATE
@@ -45,6 +52,10 @@ const footprint = new Map(); // price -> { buyQty, sellQty, deltaHistory, vol }
 
 let cvd = 0;
 const cvdSeries = [];
+
+let totalBuys = 0;
+let totalSells = 0;
+let lastUpdate = null;
 
 let needsRender = false;
 
@@ -71,13 +82,20 @@ function ensureLevel(price) {
 }
 
 function avg(arr) {
-  return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 }
 
 function minMax(arr) {
   let mn = Infinity, mx = -Infinity;
-  for (const v of arr) { if (v < mn) mn = v; if (v > mx) mx = v; }
-  if (mn === mx) { mn -= 1; mx += 1; }
+  for (const v of arr) {
+    if (v < mn) mn = v;
+    if (v > mx) mx = v;
+  }
+  if (!Number.isFinite(mn) || !Number.isFinite(mx)) return [0, 1];
+  if (mn === mx) {
+    mn -= 1;
+    mx += 1;
+  }
   return [mn, mx];
 }
 
@@ -87,10 +105,12 @@ function minMax(arr) {
 function scheduleRender() {
   if (needsRender) return;
   needsRender = true;
+
   requestAnimationFrame(() => {
     renderFootprint();
     renderHeatmap();
     renderCVD();
+    renderStats();
     needsRender = false;
   });
 }
@@ -99,9 +119,11 @@ function scheduleRender() {
 // FOOTPRINT LADDER (WITH SIGNALS)
 // =========================
 function renderFootprint() {
-  if (lastPriceBucket === null) return;
+  if (lastPriceBucket === null || !fpEl) return;
+
   fpEl.innerHTML = "";
 
+  // Build fixed price ladder around lastPriceBucket
   const prices = [];
   for (let i = LEVELS; i >= -LEVELS; i--) {
     const p = lastPriceBucket + i * TICK_SIZE;
@@ -109,6 +131,7 @@ function renderFootprint() {
     ensureLevel(p);
   }
 
+  // Max volume for cell intensity
   let maxVol = 1;
   for (const p of prices) {
     const l = footprint.get(p);
@@ -117,16 +140,23 @@ function renderFootprint() {
 
   for (const p of prices) {
     const l = footprint.get(p);
+
     const delta = l.buyQty - l.sellQty;
     const avgDelta = avg(l.deltaHistory);
-    const spike =
-      Math.abs(delta) > Math.abs(avgDelta) * DELTA_SPIKE_MULT && l.deltaHistory.length > 5;
 
+    const spike =
+      l.deltaHistory.length > 6 &&
+      Math.abs(delta) > Math.max(1e-9, Math.abs(avgDelta)) * DELTA_SPIKE_MULT;
+
+    // NOTE: this is a naive absorption heuristic (we’ll improve later)
     const absorption =
-      l.vol > ABSORPTION_VOL_THRESHOLD && stableTicks >= ABSORPTION_TICKS;
+      l.vol >= ABSORPTION_VOL_THRESHOLD &&
+      stableTicks >= ABSORPTION_TICKS &&
+      p === lastPriceBucket;
 
     const row = document.createElement("div");
     row.className = "fp-row";
+
     if (p === lastPriceBucket) row.classList.add("fp-mid");
     if (spike && delta > 0) row.classList.add("fp-spike-buy");
     if (spike && delta < 0) row.classList.add("fp-spike-sell");
@@ -153,11 +183,14 @@ function renderFootprint() {
 // HEATMAP (DELTA DOMINANCE)
 // =========================
 function renderHeatmap() {
-  if (lastPriceBucket === null) return;
-  const rowH = heatmap.height / ROWS;
+  if (lastPriceBucket === null || !heatmap || !hctx) return;
 
-  let maxAbsDelta = 1;
+  const rowH = heatmap.height ? heatmap.height / ROWS : 0;
+  if (!rowH) return;
+
   const prices = [];
+  let maxAbsDelta = 1;
+
   for (let i = LEVELS; i >= -LEVELS; i--) {
     const p = lastPriceBucket + i * TICK_SIZE;
     prices.push(p);
@@ -166,7 +199,7 @@ function renderHeatmap() {
     maxAbsDelta = Math.max(maxAbsDelta, Math.abs(l.buyQty - l.sellQty));
   }
 
-  hctx.clearRect(0,0,heatmap.width,heatmap.height);
+  hctx.clearRect(0, 0, heatmap.width, heatmap.height);
 
   prices.forEach((p, i) => {
     const l = footprint.get(p);
@@ -176,15 +209,15 @@ function renderHeatmap() {
 
     if (delta > 0) {
       hctx.fillStyle = `rgba(63,185,80,${intensity})`;
-      hctx.fillRect(0,y,heatmap.width,rowH);
+      hctx.fillRect(0, y, heatmap.width, rowH);
     } else if (delta < 0) {
       hctx.fillStyle = `rgba(248,81,73,${intensity})`;
-      hctx.fillRect(0,y,heatmap.width,rowH);
+      hctx.fillRect(0, y, heatmap.width, rowH);
     }
 
     if (p === lastPriceBucket) {
       hctx.fillStyle = "rgba(255,255,255,0.10)";
-      hctx.fillRect(0,y,heatmap.width,rowH);
+      hctx.fillRect(0, y, heatmap.width, rowH);
     }
   });
 }
@@ -193,33 +226,67 @@ function renderHeatmap() {
 // CVD CHART
 // =========================
 function renderCVD() {
-  if (cvdSeries.length < 2) return;
-  const w = cvdCanvas.width, h = cvdCanvas.height;
-  cctx.clearRect(0,0,w,h);
+  if (!cctx || !cvdCanvas || cvdSeries.length < 2) return;
 
-  const [mn,mx] = minMax(cvdSeries);
+  const w = cvdCanvas.width;
+  const h = cvdCanvas.height;
+  cctx.clearRect(0, 0, w, h);
+
+  const [mn, mx] = minMax(cvdSeries);
+
+  // light grid
+  cctx.strokeStyle = "rgba(255,255,255,0.06)";
+  cctx.lineWidth = 1;
+  cctx.beginPath();
+  for (let i = 1; i < 4; i++) {
+    const y = (h / 4) * i;
+    cctx.moveTo(0, y);
+    cctx.lineTo(w, y);
+  }
+  cctx.stroke();
+
+  // line
   cctx.strokeStyle = "#58a6ff";
   cctx.lineWidth = 2;
   cctx.beginPath();
-  cvdSeries.forEach((v,i)=>{
-    const x = (i/(cvdSeries.length-1))*w;
-    const y = h - ((v-mn)/(mx-mn))*h;
-    i===0 ? cctx.moveTo(x,y) : cctx.lineTo(x,y);
+  cvdSeries.forEach((v, i) => {
+    const x = (i / (cvdSeries.length - 1)) * w;
+    const y = h - ((v - mn) / (mx - mn)) * h;
+    if (i === 0) cctx.moveTo(x, y);
+    else cctx.lineTo(x, y);
   });
   cctx.stroke();
+}
+
+// =========================
+// STATS BAR
+// =========================
+function renderStats() {
+  if (!statTotalBuys || !statTotalSells || !statNetDelta || !statCvd || !statLastUpdate) return;
+
+  statTotalBuys.textContent = totalBuys.toFixed(2);
+  statTotalSells.textContent = totalSells.toFixed(2);
+
+  const delta = totalBuys - totalSells;
+  statNetDelta.textContent = (delta >= 0 ? "+" : "") + delta.toFixed(2);
+  statNetDelta.style.color = delta >= 0 ? "#3fb950" : "#f85149";
+
+  statCvd.textContent = cvd.toFixed(2);
+  statLastUpdate.textContent = lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : "--";
 }
 
 // =========================
 // WEBSOCKET
 // =========================
 function connect() {
-  pairEl.textContent = COIN;
-  statusEl.textContent = "CONNECTING…";
+  if (pairEl) pairEl.textContent = COIN;
+  updateStatus("CONNECTING...", "warn");
+
   ws = new WebSocket(wsUrl());
 
-  ws.onopen = () => statusEl.textContent = "CONNECTED";
-  ws.onclose = () => statusEl.textContent = "DISCONNECTED";
-  ws.onerror = () => statusEl.textContent = "ERROR";
+  ws.onopen = () => updateStatus("CONNECTED", "ok");
+  ws.onclose = () => updateStatus("DISCONNECTED", "");
+  ws.onerror = () => updateStatus("ERROR", "");
 
   ws.onmessage = (event) => {
     const trades = JSON.parse(event.data);
@@ -237,11 +304,19 @@ function connect() {
 
       lastPriceRaw = pRaw;
       lastPriceBucket = pBucket;
-      priceEl.textContent = pRaw.toFixed(2);
+
+      if (priceEl) priceEl.textContent = pRaw.toFixed(2);
+      lastUpdate = Date.now();
 
       const l = footprint.get(pBucket);
-      if (t.side === "BUY") l.buyQty += q;
-      else l.sellQty += q;
+
+      if (t.side === "BUY") {
+        l.buyQty += q;
+        totalBuys += q;
+      } else {
+        l.sellQty += q;
+        totalSells += q;
+      }
 
       const d = l.buyQty - l.sellQty;
       l.deltaHistory.push(d);
@@ -251,11 +326,18 @@ function connect() {
 
       cvd += Number(t.delta) || 0;
 
-      const row = document.createElement("div");
-      row.textContent = `${t.side} ${q} @ ${pRaw}`;
-      row.style.color = t.side === "BUY" ? "#3fb950" : "#f85149";
-      tapeEl.prepend(row);
-      if (tapeEl.children.length > 120) tapeEl.removeChild(tapeEl.lastChild);
+      // Tape
+      if (tapeEl) {
+        const row = document.createElement("div");
+        row.innerHTML = `
+          <span>${t.side}</span>
+          <span class="meta">${q.toFixed(3)} @</span>
+          <span class="price-only">${pRaw.toFixed(2)}</span>
+        `;
+        row.style.color = t.side === "BUY" ? "#3fb950" : "#f85149";
+        tapeEl.prepend(row);
+        if (tapeEl.children.length > 120) tapeEl.removeChild(tapeEl.lastChild);
+      }
     }
 
     cvdSeries.push(cvd);
@@ -265,5 +347,12 @@ function connect() {
   };
 }
 
+function updateStatus(text, className) {
+  if (statusText) statusText.textContent = text;
+  if (statusEl) statusEl.className = `status ${className}`.trim();
+}
+
+// Start
+renderStats();
 connect();
 

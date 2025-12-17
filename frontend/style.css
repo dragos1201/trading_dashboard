@@ -16,20 +16,29 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: "Inter", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: radial-gradient(circle at 20% 20%, rgba(35,90,170,0.15), transparent 30%),
+              radial-gradient(circle at 80% 0%, rgba(112,30,30,0.18), transparent 28%),
+              var(--bg);
 }
 
 header {
   display: flex;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
   align-items: center;
+  backdrop-filter: blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(0,0,0,0.75);
 }
 
 .pair {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 .right { text-align: right; }
@@ -37,23 +46,95 @@ header {
 .price {
   font-size: 20px;
   line-height: 20px;
+  font-weight: 700;
 }
 
 .status {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+}
+
+.status-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: linear-gradient(120deg, #d97757, #f85149);
+  box-shadow: 0 0 12px rgba(248,81,73,0.8);
+  transition: all 0.25s ease;
+}
+
+.status.ok .status-indicator {
+  background: linear-gradient(120deg, #2ea043, #3fb950);
+  box-shadow: 0 0 14px rgba(63,185,80,0.8);
+}
+
+.status.warn .status-indicator {
+  background: linear-gradient(120deg, #e3b341, #f2cc60);
+  box-shadow: 0 0 14px rgba(242,204,96,0.65);
+}
+
+.top-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  padding: 12px 18px 4px 18px;
+}
+
+.stat-card {
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+  padding: 10px 12px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  position: relative;
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.stat-card.subtle { opacity: 0.9; }
+
+.stat-label {
   font-size: 11px;
   color: var(--muted);
-  margin-top: 3px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 4px;
 }
 
 main {
   display: grid;
   grid-template-columns: 520px 1fr;
   height: calc(100vh - 48px);
+  padding: 0 12px 12px 12px;
+  gap: 10px;
 }
 
 .leftPane {
   border-right: 1px solid var(--border);
-  padding: 10px;
+  padding: 10px 6px 10px 6px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -70,6 +151,10 @@ main {
   color: var(--muted);
   font-size: 12px;
   margin: 0 0 4px 0;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #cvdChart {
@@ -77,6 +162,7 @@ main {
   border: 1px solid var(--border);
   background: var(--panel);
   border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 8px 20px rgba(0,0,0,0.35);
 }
 
 .ladderHeader {
@@ -88,6 +174,7 @@ main {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
 
 .ladderWrap {
@@ -103,6 +190,7 @@ main {
   background: var(--panel);
   border-radius: 10px;
   overflow: hidden;
+  box-shadow: 0 12px 22px rgba(0,0,0,0.35);
 }
 
 .fp-row {
@@ -113,6 +201,8 @@ main {
   padding: 0 8px;
   border-bottom: 1px solid rgba(255,255,255,0.03);
   font-size: 13px;
+  position: relative;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .fp-buy { text-align: right; padding-right: 6px; }
@@ -129,7 +219,39 @@ main {
   border: 1px solid var(--border);
   background: var(--panel);
   border-radius: 10px;
+  box-shadow: 0 12px 22px rgba(0,0,0,0.35);
 }
+
+.heatmapCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heatmapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 6px 0 6px;
+}
+
+.legend {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.legend-buy, .legend-sell {
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.legend-buy { background: rgba(63,185,80,0.15); color: #6ee381; }
+.legend-sell { background: rgba(248,81,73,0.15); color: #f68b83; }
 
 .tape {
   border: 1px solid var(--border);
@@ -138,12 +260,16 @@ main {
   overflow-y: auto;
   padding: 6px;
   height: 100%;
+  box-shadow: 0 12px 22px rgba(0,0,0,0.35);
 }
 
 .tape div {
   padding: 2px 6px;
   border-bottom: 1px solid rgba(255,255,255,0.03);
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* --- SIGNAL HIGHLIGHTS --- */
@@ -167,3 +293,22 @@ main {
   color: #ffcc00;
 }
 
+.fp-row:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.tape .meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tape .price-only {
+  color: #cfcfcf;
+}
+
+@media (max-width: 1100px) {
+  main { grid-template-columns: 1fr; height: auto; }
+  .leftPane { border-right: none; }
+  .ladderWrap { grid-template-columns: 1fr; }
+  .heatmapCard { order: -1; }
+}

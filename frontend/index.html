@@ -10,10 +10,36 @@
 <header>
   <div class="pair" id="pair">BTCUSDT</div>
   <div class="right">
-    <div class="price" id="price">—</div>
-    <div class="status" id="status">CONNECTING…</div>
+    <div class="price" id="price">--</div>
+    <div class="status" id="status">
+      <span class="status-indicator" aria-hidden="true"></span>
+      <span id="statusText">CONNECTING...</span>
+    </div>
   </div>
 </header>
+
+<section class="top-bar">
+  <div class="stat-card">
+    <div class="stat-label">Total Buys</div>
+    <div class="stat-value" id="totalBuys">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Sells</div>
+    <div class="stat-value" id="totalSells">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Net Delta</div>
+    <div class="stat-value" id="netDelta">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">CVD</div>
+    <div class="stat-value" id="cvdValue">0</div>
+  </div>
+  <div class="stat-card subtle">
+    <div class="stat-label">Last Update</div>
+    <div class="stat-value" id="lastUpdate">--</div>
+  </div>
+</section>
 
 <main>
   <section class="leftPane">
@@ -28,7 +54,16 @@
 
     <div class="ladderWrap">
       <div id="footprint"></div>
-      <canvas id="heatmap" width="120" height="600"></canvas>
+      <div class="heatmapCard">
+        <div class="heatmapHeader">
+          <span>Delta Heatmap</span>
+          <div class="legend">
+            <span class="legend-buy">Buy</span>
+            <span class="legend-sell">Sell</span>
+          </div>
+        </div>
+        <canvas id="heatmap" width="120" height="600"></canvas>
+      </div>
     </div>
   </section>
 
