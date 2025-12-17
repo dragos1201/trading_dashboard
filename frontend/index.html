@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Orderflow Footprint</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <div class="pair" id="pair">BTCUSDT</div>
+  <div class="right">
+    <div class="price" id="price">—</div>
+    <div class="status" id="status">CONNECTING…</div>
+  </div>
+</header>
+
+<main>
+  <section class="leftPane">
+    <div class="panelTitle">CVD</div>
+    <canvas id="cvdChart" width="360" height="160"></canvas>
+
+    <div class="ladderHeader">
+      <div>BUY</div>
+      <div>PRICE</div>
+      <div>SELL</div>
+    </div>
+
+    <div class="ladderWrap">
+      <div id="footprint"></div>
+      <canvas id="heatmap" width="120" height="600"></canvas>
+    </div>
+  </section>
+
+  <section class="rightPane">
+    <div class="panelTitle">Trade Tape</div>
+    <div class="tape" id="tape"></div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
+
