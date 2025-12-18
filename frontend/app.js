@@ -10,6 +10,7 @@ const LEVELS = 25;
 const ROWS = LEVELS * 2 + 1;
 
 const CVD_MAX_POINTS = 320;
+const PRICE_MAX_POINTS = 320;
 
 // Detection params
 const DELTA_SPIKE_MULT = 3;
@@ -39,6 +40,9 @@ const hctx = heatmap ? heatmap.getContext("2d") : null;
 const cvdCanvas = document.getElementById("cvdChart");
 const cctx = cvdCanvas ? cvdCanvas.getContext("2d") : null;
 
+const priceCanvas = document.getElementById("priceChart");
+const pctx = priceCanvas ? priceCanvas.getContext("2d") : null;
+
 // =========================
 // STATE
 // =========================
@@ -52,6 +56,7 @@ const footprint = new Map(); // price -> { buyQty, sellQty, deltaHistory, vol }
 
 let cvd = 0;
 const cvdSeries = [];
+const priceSeries = [];
 
 let totalBuys = 0;
 let totalSells = 0;
@@ -110,20 +115,31 @@ function scheduleRender() {
     renderFootprint();
     renderHeatmap();
     renderCVD();
+    renderPriceChart();
     renderStats();
     needsRender = false;
   });
 }
 
 // =========================
-// FOOTPRINT LADDER (WITH SIGNALS)
+// FOOTPRINT LADDER
 // =========================
 function renderFootprint() {
   if (lastPriceBucket === null || !fpEl) return;
 
   fpEl.innerHTML = "";
 
-  // Build fixed price ladder around lastPriceBucket
+  const ladderHeight = heatmap ? heatmap.height : null;
+  const rowHeight = ladderHeight ? ladderHeight / ROWS : null;
+
+  if (ladderHeight) {
+    fpEl.style.height = `${ladderHeight}px`;
+    fpEl.style.setProperty("--fp-row-height", `${rowHeight}px`);
+  } else {
+    fpEl.style.removeProperty("height");
+    fpEl.style.removeProperty("--fp-row-height");
+  }
+
   const prices = [];
   for (let i = LEVELS; i >= -LEVELS; i--) {
     const p = lastPriceBucket + i * TICK_SIZE;
@@ -131,7 +147,6 @@ function renderFootprint() {
     ensureLevel(p);
   }
 
-  // Max volume for cell intensity
   let maxVol = 1;
   for (const p of prices) {
     const l = footprint.get(p);
@@ -140,7 +155,6 @@ function renderFootprint() {
 
   for (const p of prices) {
     const l = footprint.get(p);
-
     const delta = l.buyQty - l.sellQty;
     const avgDelta = avg(l.deltaHistory);
 
@@ -148,7 +162,6 @@ function renderFootprint() {
       l.deltaHistory.length > 6 &&
       Math.abs(delta) > Math.max(1e-9, Math.abs(avgDelta)) * DELTA_SPIKE_MULT;
 
-    // NOTE: this is a naive absorption heuristic (we’ll improve later)
     const absorption =
       l.vol >= ABSORPTION_VOL_THRESHOLD &&
       stableTicks >= ABSORPTION_TICKS &&
@@ -180,16 +193,16 @@ function renderFootprint() {
 }
 
 // =========================
-// HEATMAP (DELTA DOMINANCE)
+// HEATMAP
 // =========================
 function renderHeatmap() {
   if (lastPriceBucket === null || !heatmap || !hctx) return;
 
-  const rowH = heatmap.height ? heatmap.height / ROWS : 0;
-  if (!rowH) return;
+  const rowH = heatmap.height / ROWS;
+  hctx.clearRect(0, 0, heatmap.width, heatmap.height);
 
-  const prices = [];
   let maxAbsDelta = 1;
+  const prices = [];
 
   for (let i = LEVELS; i >= -LEVELS; i--) {
     const p = lastPriceBucket + i * TICK_SIZE;
@@ -198,8 +211,6 @@ function renderHeatmap() {
     const l = footprint.get(p);
     maxAbsDelta = Math.max(maxAbsDelta, Math.abs(l.buyQty - l.sellQty));
   }
-
-  hctx.clearRect(0, 0, heatmap.width, heatmap.height);
 
   prices.forEach((p, i) => {
     const l = footprint.get(p);
@@ -226,7 +237,7 @@ function renderHeatmap() {
 // CVD CHART
 // =========================
 function renderCVD() {
-  if (!cctx || !cvdCanvas || cvdSeries.length < 2) return;
+  if (!cctx || cvdSeries.length < 2) return;
 
   const w = cvdCanvas.width;
   const h = cvdCanvas.height;
@@ -234,36 +245,44 @@ function renderCVD() {
 
   const [mn, mx] = minMax(cvdSeries);
 
-  // light grid
-  cctx.strokeStyle = "rgba(255,255,255,0.06)";
-  cctx.lineWidth = 1;
-  cctx.beginPath();
-  for (let i = 1; i < 4; i++) {
-    const y = (h / 4) * i;
-    cctx.moveTo(0, y);
-    cctx.lineTo(w, y);
-  }
-  cctx.stroke();
-
-  // line
   cctx.strokeStyle = "#58a6ff";
   cctx.lineWidth = 2;
   cctx.beginPath();
   cvdSeries.forEach((v, i) => {
     const x = (i / (cvdSeries.length - 1)) * w;
     const y = h - ((v - mn) / (mx - mn)) * h;
-    if (i === 0) cctx.moveTo(x, y);
-    else cctx.lineTo(x, y);
+    i === 0 ? cctx.moveTo(x, y) : cctx.lineTo(x, y);
   });
   cctx.stroke();
 }
 
 // =========================
-// STATS BAR
+// PRICE CHART
+// =========================
+function renderPriceChart() {
+  if (!pctx || priceSeries.length < 2) return;
+
+  const w = priceCanvas.width;
+  const h = priceCanvas.height;
+  pctx.clearRect(0, 0, w, h);
+
+  const [mn, mx] = minMax(priceSeries);
+
+  pctx.strokeStyle = "#9b8cff";
+  pctx.lineWidth = 2;
+  pctx.beginPath();
+  priceSeries.forEach((v, i) => {
+    const x = (i / (priceSeries.length - 1)) * w;
+    const y = h - ((v - mn) / (mx - mn)) * h;
+    i === 0 ? pctx.moveTo(x, y) : pctx.lineTo(x, y);
+  });
+  pctx.stroke();
+}
+
+// =========================
+// STATS
 // =========================
 function renderStats() {
-  if (!statTotalBuys || !statTotalSells || !statNetDelta || !statCvd || !statLastUpdate) return;
-
   statTotalBuys.textContent = totalBuys.toFixed(2);
   statTotalSells.textContent = totalSells.toFixed(2);
 
@@ -272,14 +291,16 @@ function renderStats() {
   statNetDelta.style.color = delta >= 0 ? "#3fb950" : "#f85149";
 
   statCvd.textContent = cvd.toFixed(2);
-  statLastUpdate.textContent = lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : "--";
+  statLastUpdate.textContent = lastUpdate
+    ? new Date(lastUpdate).toLocaleTimeString()
+    : "--";
 }
 
 // =========================
 // WEBSOCKET
 // =========================
 function connect() {
-  if (pairEl) pairEl.textContent = COIN;
+  pairEl.textContent = COIN;
   updateStatus("CONNECTING...", "warn");
 
   ws = new WebSocket(wsUrl());
@@ -305,7 +326,10 @@ function connect() {
       lastPriceRaw = pRaw;
       lastPriceBucket = pBucket;
 
-      if (priceEl) priceEl.textContent = pRaw.toFixed(2);
+      priceSeries.push(pRaw);
+      if (priceSeries.length > PRICE_MAX_POINTS) priceSeries.shift();
+
+      priceEl.textContent = pRaw.toFixed(2);
       lastUpdate = Date.now();
 
       const l = footprint.get(pBucket);
@@ -323,10 +347,8 @@ function connect() {
       if (l.deltaHistory.length > 20) l.deltaHistory.shift();
 
       l.vol += q;
-
       cvd += Number(t.delta) || 0;
 
-      // Tape
       if (tapeEl) {
         const row = document.createElement("div");
         row.innerHTML = `
@@ -348,11 +370,13 @@ function connect() {
 }
 
 function updateStatus(text, className) {
-  if (statusText) statusText.textContent = text;
-  if (statusEl) statusEl.className = `status ${className}`.trim();
+  statusText.textContent = text;
+  statusEl.className = `status ${className}`.trim();
 }
 
-// Start
+// =========================
+// START
+// =========================
 renderStats();
 connect();
 

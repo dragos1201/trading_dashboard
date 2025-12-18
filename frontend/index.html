@@ -43,7 +43,7 @@
 
 <main>
   <section class="leftPane">
-    <div class="panelTitle">CVD</div>
+  <div class="panelTitle">CVD</div>
     <canvas id="cvdChart" width="360" height="160"></canvas>
 
     <div class="ladderHeader">
@@ -68,12 +68,18 @@
   </section>
 
   <section class="rightPane">
-    <div class="panelTitle">Trade Tape</div>
-    <div class="tape" id="tape"></div>
+    <div class="chartCard">
+      <div class="panelTitle">Price</div>
+      <canvas id="priceChart" width="600" height="200"></canvas>
+    </div>
+
+    <div class="tapeCard">
+      <div class="panelTitle">Trade Tape</div>
+      <div class="tape" id="tape"></div>
+    </div>
   </section>
 </main>
 
 <script src="app.js"></script>
 </body>
 </html>
-
