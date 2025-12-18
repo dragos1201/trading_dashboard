@@ -1,85 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Orderflow Footprint</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<header>
-  <div class="pair" id="pair">BTCUSDT</div>
+<header class="topbar">
+  <div class="left">
+    <div class="pair" id="pair">BTCUSDT</div>
+  </div>
+
   <div class="right">
-    <div class="price" id="price">--</div>
-    <div class="status" id="status">
-      <span class="status-indicator" aria-hidden="true"></span>
-      <span id="statusText">CONNECTING...</span>
+    <div class="lastPrice" id="price">—</div>
+    <div class="statusWrap">
+      <span class="dot ok"></span>
+      <span class="statusText" id="statusText">CONNECTING…</span>
+      <span class="status" id="status"></span>
     </div>
   </div>
 </header>
 
-<section class="top-bar">
-  <div class="stat-card">
-    <div class="stat-label">Total Buys</div>
-    <div class="stat-value" id="totalBuys">0</div>
+<section class="statsRow">
+  <div class="statCard">
+    <div class="statLabel">TOTAL BUYS</div>
+    <div class="statValue" id="totalBuys">0.00</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-label">Total Sells</div>
-    <div class="stat-value" id="totalSells">0</div>
+  <div class="statCard">
+    <div class="statLabel">TOTAL SELLS</div>
+    <div class="statValue" id="totalSells">0.00</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-label">Net Delta</div>
-    <div class="stat-value" id="netDelta">0</div>
+  <div class="statCard">
+    <div class="statLabel">NET DELTA</div>
+    <div class="statValue" id="netDelta">0.00</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-label">CVD</div>
-    <div class="stat-value" id="cvdValue">0</div>
+  <div class="statCard">
+    <div class="statLabel">CVD</div>
+    <div class="statValue" id="cvdValue">0.00</div>
   </div>
-  <div class="stat-card subtle">
-    <div class="stat-label">Last Update</div>
-    <div class="stat-value" id="lastUpdate">--</div>
+  <div class="statCard">
+    <div class="statLabel">LAST UPDATE</div>
+    <div class="statValue" id="lastUpdate">—</div>
   </div>
 </section>
 
-<main>
-  <section class="leftPane">
-  <div class="panelTitle">CVD</div>
-    <canvas id="cvdChart" width="360" height="160"></canvas>
-
-    <div class="ladderHeader">
-      <div>BUY</div>
-      <div>PRICE</div>
-      <div>SELL</div>
+<main class="layout">
+  <section class="chartsRow">
+    <div class="panel">
+      <div class="panelTitle">CVD</div>
+      <div class="chartBox">
+        <canvas id="cvdChart"></canvas>
+        <div class="tooltip" id="cvdTooltip"></div>
+      </div>
     </div>
 
-    <div class="ladderWrap">
-      <div id="footprint"></div>
-      <div class="heatmapCard">
-        <div class="heatmapHeader">
-          <span>Delta Heatmap</span>
-          <div class="legend">
-            <span class="legend-buy">Buy</span>
-            <span class="legend-sell">Sell</span>
-          </div>
-        </div>
-        <canvas id="heatmap" width="120" height="600"></canvas>
+    <div class="panel">
+      <div class="panelTitle">PRICE</div>
+      <div class="chartBox">
+        <canvas id="priceChart"></canvas>
+        <div class="tooltip" id="priceTooltip"></div>
       </div>
     </div>
   </section>
 
-  <section class="rightPane">
-    <div class="chartCard">
-      <div class="panelTitle">Price</div>
-      <canvas id="priceChart" width="600" height="200"></canvas>
+  <section class="bottomRow">
+    <div class="panel footprintPanel">
+      <div class="panelTitle">FOOTPRINT</div>
+
+      <div class="footprintHeader">
+        <div>BUY</div>
+        <div>PRICE</div>
+        <div>SELL</div>
+        <div class="heatmapLabel">DELTA HEATMAP</div>
+      </div>
+
+      <div class="footprintWrap" id="ladderViewport">
+        <div id="footprint" class="footprint"></div>
+        <canvas id="heatmap" class="heatmap"></canvas>
+      </div>
     </div>
 
-    <div class="tapeCard">
-      <div class="panelTitle">Trade Tape</div>
+    <aside class="panel tapePanel">
+      <div class="panelTitle">TAPE</div>
       <div class="tape" id="tape"></div>
-    </div>
+    </aside>
   </section>
 </main>
 
 <script src="app.js"></script>
 </body>
 </html>
+
